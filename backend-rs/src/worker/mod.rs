@@ -1,6 +1,10 @@
+use rocket::fairing::AdHoc;
+
+pub mod service;
+
 use rocket::form::Form;
 
-use crate::service::{sandbox_service, Config};
+use crate::worker::service::{Config, sandbox_service};
 
 #[derive(FromForm)]
 pub struct UploadForm {
@@ -158,4 +162,21 @@ go build main.go"#,
         &config,
     );
     toml::to_string(&sandbox_result).unwrap()
+}
+
+pub fn stage() -> AdHoc {
+    AdHoc::on_ignite("", |rocket| async {
+        rocket.mount(
+            "/worker",
+            routes![
+                c_controller,
+                cpp_controller,
+                c_test_controller,
+                cpp_test_controller,
+                java_test_controller,
+                go_test_controller,
+                python3_test_controller
+            ],
+        )
+    })
 }
