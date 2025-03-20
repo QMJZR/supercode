@@ -1,5 +1,6 @@
 package com.supercode.supercode.po;
 
+import com.supercode.supercode.vo.RetUserVO;
 import com.supercode.supercode.vo.UserVO;
 
 import jakarta.persistence.Basic;
@@ -57,10 +58,20 @@ public class User {
         userVO.setUsername(username);
         userVO.setPassword(password);
         userVO.setName(name);
-        userVO.setAvator(avatar);
+        userVO.setAvatar(avatar);
         userVO.setTelephone(telephone);
         userVO.setEmail(email);
         userVO.setLocation(location);
         return userVO;
+    }
+    public RetUserVO toRetVO() {
+        RetUserVO retUserVO = new RetUserVO();
+        retUserVO.setUsername(username);
+        retUserVO.setName(name);
+        retUserVO.setAvatar(avatar);
+        retUserVO.setTelephone(telephone);
+        retUserVO.setEmail(email);
+        retUserVO.setLocation(location);
+        return retUserVO;
     }
 }

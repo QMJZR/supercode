@@ -5,6 +5,11 @@ public class SupercodeException extends RuntimeException {
         super(message);
     }
 
+    public static SupercodeException createFail() {
+        throw new SupercodeException("创建用户失败");
+    }
+
+
     public static SupercodeException userExisted() {
         throw new SupercodeException("用户名已存在");
     }
@@ -13,7 +18,11 @@ public class SupercodeException extends RuntimeException {
         throw new SupercodeException("用户不存在/用户密码错误");
     }
 
-    public static SupercodeException userNotExisted() {
+    public static SupercodeException updateFailed() {
+        throw new SupercodeException("更新用户信息失败");
+    }
+
+    public static Exception userNotExisted() {
         throw new SupercodeException("用户不存在");
     }
 }
