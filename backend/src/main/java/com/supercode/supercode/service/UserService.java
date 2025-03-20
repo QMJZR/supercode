@@ -1,5 +1,6 @@
 package com.supercode.supercode.service;
 
+import com.supercode.supercode.vo.RetUserVO;
 import org.springframework.stereotype.Service;
 
 import com.supercode.supercode.vo.LoginResultVO;
@@ -9,7 +10,7 @@ import com.supercode.supercode.vo.UserVO;
 @Service
 public interface UserService {
 
-    UserVO getUserDetail(String username);
+    RetUserVO getUserDetail(String username) throws Exception;
 
     MessageVO createUser(UserVO user);
 

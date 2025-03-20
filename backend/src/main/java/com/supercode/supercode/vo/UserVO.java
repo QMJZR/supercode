@@ -6,6 +6,7 @@ import io.micrometer.common.lang.Nullable;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @Getter
 @Setter
@@ -17,7 +18,7 @@ public class UserVO {
     private String password;
     private String name;
     @Nullable
-    private String avator;
+    private String avatar;
     @Nullable
     private String telephone;
     @Nullable
@@ -31,10 +32,10 @@ public class UserVO {
             user.setUuid(uuid);
         }
         user.setUsername(username);
-        user.setPassword(password);
+        user.setPassword(new BCryptPasswordEncoder().encode(password));
         user.setName(name);
-        if (avator != null) {
-            user.setAvatar(avator);
+        if (avatar != null) {
+            user.setAvatar(avatar);
         }
         if (telephone != null) {
             user.setTelephone(telephone);
