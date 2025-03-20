@@ -7,6 +7,7 @@ use std::process::{Command, Stdio};
 use serde::{Deserialize, Serialize};
 
 const SANDBOX_FOLDER: &str = "sandbox";
+const TMP_FOLDER: &str = "tmp";
 
 #[derive(Serialize, Deserialize)]
 enum ExitState {
@@ -78,18 +79,23 @@ pub fn sandbox_service(
 ) -> SandboxResult {
     let perm = fs::Permissions::from_mode(0o777);
     if !Path::new(SANDBOX_FOLDER).exists() {
-        fs::create_dir(SANDBOX_FOLDER).expect("Unable to create SANDBOX folder");
-        fs::set_permissions(SANDBOX_FOLDER, perm.clone())
-            .expect("Failed to set permission for folder");
+        panic!("No sandbox found");
     }
-    fs::write(format!("./sandbox/{}", src_name), src).expect("Unable to write main.cpp");
-    fs::set_permissions(format!("./sandbox/{}", src_name), perm.clone())
-        .expect("Unable to set permission for main.cpp");
-    fs::write("./sandbox/in", &option.input).expect("Unable to write in");
+    if !Path::new(TMP_FOLDER).exists() {
+        fs::create_dir(TMP_FOLDER).unwrap();
+    }
+    fs::set_permissions(TMP_FOLDER, perm.clone()).unwrap();
+    fs::copy(
+        Path::new(&format!("{}/sandbox", SANDBOX_FOLDER)),
+        Path::new(&format!("{}/sandbox", TMP_FOLDER)),
+    )
+    .unwrap();
+    fs::write(format!("./{}/{}", TMP_FOLDER, src_name), src).expect("Unable to write main.cpp");
+    fs::write(format!("./{}/in", TMP_FOLDER), &option.input).expect("Unable to write in");
     for s in script {
         println!("{}", s);
-        fs::write("./sandbox/script", s).expect("Unable to write script");
-        fs::set_permissions("./sandbox/script", perm.clone())
+        fs::write(format!("./{}/script", TMP_FOLDER), s).expect("Unable to write script");
+        fs::set_permissions(format!("./{}/script", TMP_FOLDER), perm.clone())
             .expect("Unable to set permission for script");
         let mut command = Command::new("docker");
         command.arg("run").arg("--rm");
@@ -99,30 +105,23 @@ pub fn sandbox_service(
             command.arg("-e");
             command.arg(format!("{}={}", k, v));
         }
-        let _ = command.arg("-v").arg("./sandbox:/sandbox")
+        let _ = command.arg("-v").arg(format!("./{}:/sandbox", TMP_FOLDER))
             .arg(option.image.as_str())
             .arg("bash")
             .arg("-c")
             .arg(format!(
-                "/sandbox/sandbox -t {} --time-reserved {} -m {} --memory-reserved {} -c {} --file-stdin {} --file-stdout {} --file-stderr {} --file-result {} --large-stack {} --output-limit {} --process-limit {}",
-                option.time_limit, option.time_limit_reserved, option.memory_limit, option.memory_reserved,option.command,  "in", option.file_stdout, option.file_stderr,option.file_result, option.large_stack, option.output_limit, option.process_limit
+                "/{}/sandbox -t {} --time-reserved {} -m {} --memory-reserved {} -c {} --file-stdin {} --file-stdout {} --file-stderr {} --file-result {} --large-stack {} --output-limit {} --process-limit {}",
+            SANDBOX_FOLDER, option.time_limit, option.time_limit_reserved, option.memory_limit, option.memory_reserved,option.command,  "in", option.file_stdout, option.file_stderr,option.file_result, option.large_stack, option.output_limit, option.process_limit
             ))
-            .stdout(Stdio::piped()) // Capture stdout
-            .stderr(Stdio::piped()) // Capture stderr
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped()) 
             .output()
-            .unwrap(); // Execute
-    }
-    let entries = fs::read_dir("sandbox").unwrap();
-    let ret =
-        toml::from_str(&String::from_utf8(fs::read("./sandbox/result.toml").unwrap()).unwrap())
             .unwrap();
-    for entry in entries {
-        let path = entry.unwrap().path();
-        if path.is_file() && path.file_name() != Some(std::ffi::OsStr::new("sandbox")) {
-            fs::remove_file(path).unwrap();
-        } else if path.is_dir() {
-            fs::remove_dir_all(path).unwrap();
-        }
     }
+    let ret = toml::from_str(
+        &String::from_utf8(fs::read(format!("./{}/result.toml", TMP_FOLDER)).unwrap()).unwrap(),
+    )
+    .unwrap();
+    fs::remove_dir_all(TMP_FOLDER).unwrap();
     ret
 }

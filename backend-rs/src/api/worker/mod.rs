@@ -1,6 +1,6 @@
 mod service;
 
-use axum::{Json, Router, routing::get};
+use axum::{Form, Router, routing::get};
 use serde::{Deserialize, Serialize};
 use service::{Config, sandbox_service};
 
@@ -11,7 +11,7 @@ pub struct UploadForm {
     stdin: String,
 }
 
-pub async fn c_controller(upload_form: Json<UploadForm>) -> String {
+pub async fn c_controller(upload_form: Form<UploadForm>) -> String {
     let sandbox_result = sandbox_service(
         &upload_form.src,
         "main.c",
@@ -26,7 +26,7 @@ gcc main.c -o main"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-pub async fn cpp_controller(upload_form: Json<UploadForm>) -> String {
+pub async fn cpp_controller(upload_form: Form<UploadForm>) -> String {
     let sandbox_result = sandbox_service(
         &upload_form.src,
         "main.cpp",
@@ -155,6 +155,25 @@ go build main.go"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
+pub async fn robust_contrller() -> String {
+    let sandbox_result = sandbox_service(
+        r#"#include <iostream>
+using namespace std;
+int main() {
+    int a, b;
+    cin >> a >> b;
+    cout << "C++: a + b = " << a + b << "\n";
+}"#,
+        "main.cpp",
+        vec![
+            r#"#!/bin/bash
+rm -rf /sandbox"#,
+        ],
+        &Config::new("gcc:14.2".into(), "2 3".to_string()),
+    );
+    toml::to_string(&sandbox_result).unwrap()
+}
+
 pub fn stage() -> Router {
     Router::new()
         .route("/c", get(c_test_controller).post(c_controller))
@@ -162,4 +181,5 @@ pub fn stage() -> Router {
         .route("/java", get(java_test_controller))
         .route("/python3", get(python3_test_controller))
         .route("/go", get(go_test_controller))
+        .route("/robust", get(robust_contrller))
 }
