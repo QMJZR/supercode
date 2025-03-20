@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 axum = "0.8.1"
+bcrypt = "0.17.0"
 chrono = "0.4.40"
 jsonwebtoken = "9.3.1"
 mysql = "26.0.0"

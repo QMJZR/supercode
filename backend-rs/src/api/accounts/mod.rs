@@ -5,6 +5,7 @@ use axum::response::Response;
 use axum::routing::{post, put};
 use axum::{Json, middleware};
 use axum::{Router, extract::State, routing::get};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use chrono::Utc;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use mysql::prelude::{FromRow, Queryable};
@@ -145,7 +146,7 @@ async fn create_user<'a>(
         r"INSERT INTO users (username, password, name) VALUES (:username, :password, :name)",
         params! {
             "username" => &user.username,
-            "password" => &user.password,
+            "password" => hash(&user.password, DEFAULT_COST).unwrap(),
             "name" => &user.name
         },
     )
@@ -165,36 +166,50 @@ async fn login<'a>(
 ) -> Json<ResultVO<'a, LoginMessageVO<'a>>> {
     let mut conn = pool.get_conn().unwrap();
 
-    let uuid: Vec<u8> = conn
-        .exec_first(
-            r"SELECT uuid FROM users WHERE username = :username and password = :password",
-            params! {
-                "username" => &login_vo.username,
-                "password" => &login_vo.password,
+    if let Ok(Some((password, uuid))) = conn.exec_first::<(String, Vec<u8>), _, _>(
+        r"SELECT password, uuid FROM users WHERE username = :username",
+        params! {
+            "username" => &login_vo.username,
+        },
+    ) {
+        let now = Utc::now();
+
+        if !verify(login_vo.password, &password).unwrap() {
+            return Json(ResultVO {
+                code: "400",
+                data: LoginMessageVO {
+                    msg: "用户不存在/用户密码错误",
+                    token: "".to_string(),
+                },
+            });
+        }
+
+        let token = encode(
+            &Header::default(),
+            &JwtPayload {
+                uuid,
+                exp: now.timestamp() as usize + EXPIRE_TIME_SECS,
             },
+            &EncodingKey::from_secret("secret".as_ref()),
         )
-        .unwrap()
         .unwrap();
 
-    let now = Utc::now();
-
-    let token = encode(
-        &Header::default(),
-        &JwtPayload {
-            uuid,
-            exp: now.timestamp() as usize + EXPIRE_TIME_SECS,
-        },
-        &EncodingKey::from_secret("secret".as_ref()),
-    )
-    .unwrap();
-
-    Json(ResultVO {
-        code: "400",
-        data: LoginMessageVO {
-            msg: "登录成功",
-            token,
-        },
-    })
+        Json(ResultVO {
+            code: "000",
+            data: LoginMessageVO {
+                msg: "登录成功",
+                token,
+            },
+        })
+    } else {
+        Json(ResultVO {
+            code: "400",
+            data: LoginMessageVO {
+                msg: "用户不存在/用户密码错误",
+                token: "".to_string(),
+            },
+        })
+    }
 }
 
 async fn update_user<'a>(
@@ -236,7 +251,22 @@ pub fn stage() -> Router {
     let url = "mysql://root:12345678@127.0.0.1:33060/Supercode";
     let pool = Pool::new(url).unwrap();
 
-    // TODO: CREATE TABLE IF NOT EXISTS
+    // CREATE TABLE IF NOT EXISTS
+    pool.get_conn()
+        .unwrap()
+        .query_drop(
+            r"CREATE TABLE IF NOT EXISTS  users  (
+    uuid BINARY(16) NOT NULL PRIMARY KEY DEFAULT (UUID_TO_BIN(UUID())),
+    username VARCHAR(50) NOT NULL COMMENT '用户名，不允许为空',
+    password VARCHAR(100) NOT NULL COMMENT '用户密码，仅参与插入操作',
+    name VARCHAR(50) NOT NULL COMMENT '用户姓名，不允许为空',
+    avatar VARCHAR(255) COMMENT '用户头像链接',
+    telephone VARCHAR(11) COMMENT '用户手机号，格式需符合1开头的11位数字',
+    email VARCHAR(100) COMMENT '用户邮箱，格式需符合邮箱规范',
+    location VARCHAR(255) COMMENT '用户所在地'
+) COMMENT='用户表';",
+        )
+        .unwrap();
 
     Router::new()
         .route("/", post(create_user))
