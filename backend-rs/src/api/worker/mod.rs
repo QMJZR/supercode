@@ -1,20 +1,17 @@
-use rocket::fairing::AdHoc;
+mod service;
 
-pub mod service;
+use axum::{Json, Router, routing::get};
+use serde::{Deserialize, Serialize};
+use service::{Config, sandbox_service};
 
-use rocket::form::Form;
-
-use crate::worker::service::{Config, sandbox_service};
-
-#[derive(FromForm)]
+#[derive(Serialize, Deserialize)]
 pub struct UploadForm {
     src: String,
     image: String,
     stdin: String,
 }
 
-#[post("/c", data = "<upload_form>")]
-pub fn c_controller(upload_form: Form<UploadForm>) -> String {
+pub async fn c_controller(upload_form: Json<UploadForm>) -> String {
     let sandbox_result = sandbox_service(
         &upload_form.src,
         "main.c",
@@ -29,8 +26,7 @@ gcc main.c -o main"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-#[post("/cpp", data = "<upload_form>")]
-pub fn cpp_controller(upload_form: Form<UploadForm>) -> String {
+pub async fn cpp_controller(upload_form: Json<UploadForm>) -> String {
     let sandbox_result = sandbox_service(
         &upload_form.src,
         "main.cpp",
@@ -45,8 +41,7 @@ g++ main.cpp -o main"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-#[get("/c")]
-pub fn c_test_controller() -> String {
+pub async fn c_test_controller() -> String {
     let sandbox_result = sandbox_service(
         r#"#include <stdio.h>
 int main() {
@@ -66,8 +61,7 @@ gcc main.c -o main"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-#[get("/cpp")]
-pub fn cpp_test_controller() -> String {
+pub async fn cpp_test_controller() -> String {
     let sandbox_result = sandbox_service(
         r#"#include <iostream>
 using namespace std;
@@ -88,8 +82,7 @@ g++ main.cpp -o main"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-#[get("/java")]
-pub fn java_test_controller() -> String {
+pub async fn java_test_controller() -> String {
     let mut config = Config::new("openjdk:11".into(), "3 4".to_string());
     config.memory_limit = 4096000;
     config.memory_reserved = 4096000;
@@ -119,8 +112,7 @@ java -Xms64m -Xmx128m Main"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-#[get("/python3")]
-pub fn python3_test_controller() -> String {
+pub async fn python3_test_controller() -> String {
     let sandbox_result = sandbox_service(
         r#"a, b = list(int(x) for x in input().split())
 print(f"a + b = {a + b}")"#,
@@ -134,8 +126,7 @@ python main.py"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-#[get("/go")]
-pub fn go_test_controller() -> String {
+pub async fn go_test_controller() -> String {
     let mut config = Config::new("golang:1.24".into(), "5 6".to_string());
     config.time_limit = 5;
     config.memory_limit = 4096000;
@@ -164,19 +155,11 @@ go build main.go"#,
     toml::to_string(&sandbox_result).unwrap()
 }
 
-pub fn stage() -> AdHoc {
-    AdHoc::on_ignite("", |rocket| async {
-        rocket.mount(
-            "/worker",
-            routes![
-                c_controller,
-                cpp_controller,
-                c_test_controller,
-                cpp_test_controller,
-                java_test_controller,
-                go_test_controller,
-                python3_test_controller
-            ],
-        )
-    })
+pub fn stage() -> Router {
+    Router::new()
+        .route("/c", get(c_test_controller).post(c_controller))
+        .route("/cpp", get(cpp_test_controller).post(cpp_controller))
+        .route("/java", get(java_test_controller))
+        .route("/python3", get(python3_test_controller))
+        .route("/go", get(go_test_controller))
 }

@@ -107,7 +107,6 @@ pub fn sandbox_service(
                 "/sandbox/sandbox -t {} --time-reserved {} -m {} --memory-reserved {} -c {} --file-stdin {} --file-stdout {} --file-stderr {} --file-result {} --large-stack {} --output-limit {} --process-limit {}",
                 option.time_limit, option.time_limit_reserved, option.memory_limit, option.memory_reserved,option.command,  "in", option.file_stdout, option.file_stderr,option.file_result, option.large_stack, option.output_limit, option.process_limit
             ))
-            // .arg("/sandbox/sandbox")
             .stdout(Stdio::piped()) // Capture stdout
             .stderr(Stdio::piped()) // Capture stderr
             .output()
