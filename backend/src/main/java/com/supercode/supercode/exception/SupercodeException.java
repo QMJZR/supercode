@@ -9,6 +9,9 @@ public class SupercodeException extends RuntimeException {
         throw new SupercodeException("创建用户失败");
     }
 
+    public static SupercodeException loginRequired() {
+        throw new SupercodeException("请登录");
+    }
 
     public static SupercodeException userExisted() {
         throw new SupercodeException("用户名已存在");
