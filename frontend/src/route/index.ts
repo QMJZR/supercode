@@ -9,19 +9,27 @@ const router = createRouter({
     },
     {
       path: "/login",
-      component: () => import("../views/user/UserLogin.vue")
+      name: "Login",
+      component: () => import("../views/user/UserLogin.vue"),
+      meta:{"title":"请登录"},
     },
     {
       path: "/register",
-      component: () => import("../views/user/UserRegister.vue")
+      name: "Register",
+      component: () => import("../views/user/UserRegister.vue"),
+      meta: {"title":"注册"}
     },
     {
       path: "/app",
-      component: () => import("../views/app/UserApp.vue")
+      name: "App",
+      component: () => import("../views/app/UserApp.vue"),
+      meta:{"title":"首页"}
     },
     {
       path: "/admin",
+      name: "Admin",
       component: () => import("../views/admin/AdminDashboard.vue"),
+      meta:{"title":"管理"}
     }
   ]
 });

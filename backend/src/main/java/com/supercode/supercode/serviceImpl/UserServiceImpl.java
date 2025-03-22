@@ -1,6 +1,7 @@
 package com.supercode.supercode.serviceImpl;
 
 import cn.hutool.core.lang.Validator;
+import com.supercode.supercode.po.LoginResult;
 import com.supercode.supercode.vo.RetUserVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,7 +12,6 @@ import com.supercode.supercode.po.User;
 import com.supercode.supercode.repository.UserRepository;
 import com.supercode.supercode.service.UserService;
 import com.supercode.supercode.util.TokenUtil;
-import com.supercode.supercode.vo.LoginResultVO;
 import com.supercode.supercode.vo.MessageVO;
 import com.supercode.supercode.vo.UserVO;
 
@@ -40,7 +40,6 @@ public class UserServiceImpl implements UserService {
         if (userRepository.findByUsername(user.getUsername()) != null) {
             throw SupercodeException.userExisted();
         }
-        user.setPassword(new BCryptPasswordEncoder().encode(user.getPassword()));
         if(user.getTelephone() != null && (user.getTelephone().charAt(0) != '1' || user.getTelephone().length() != 11))
             throw SupercodeException.createFail();
         if(user.getEmail()!=null&&!Validator.isEmail(user.getEmail()))
@@ -50,11 +49,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public LoginResultVO login(String username, String password) {
+    public LoginResult login(String username, String password) {
         BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         User user = userRepository.findByUsername(username);
         if (user != null&&bCryptPasswordEncoder.matches(password,user.getPassword())) {
-            return new LoginResultVO("登录成功", tokenUtil.getToken(user));
+            return new LoginResult("登录成功", tokenUtil.getToken(user));
         }
         throw SupercodeException.loginFailure();
     }
