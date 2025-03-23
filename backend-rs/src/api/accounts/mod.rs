@@ -1,16 +1,19 @@
 use axum::extract::{Path, Request};
 use axum::http::{Method, StatusCode};
 use axum::middleware::Next;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{post, put};
 use axum::{Json, middleware};
 use axum::{Router, extract::State, routing::get};
+use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::Cookie;
 use bcrypt::{DEFAULT_COST, hash, verify};
 use chrono::Utc;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use mysql::prelude::{FromRow, Queryable};
 use mysql::{Pool, params};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(Serialize, Deserialize)]
 struct ResultVO<'a, T> {
@@ -18,7 +21,7 @@ struct ResultVO<'a, T> {
     data: T,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, ToSchema)]
 struct User {
     uuid: Option<String>,
     username: String,
@@ -45,7 +48,7 @@ struct MessageVO<'a> {
     msg: &'a str,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 struct LoginVO {
     username: String,
     password: String,
@@ -63,7 +66,7 @@ struct JwtPayload {
     exp: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, ToSchema)]
 struct UpdateUserVO {
     username: String,
     name: Option<String>,
@@ -75,17 +78,22 @@ struct UpdateUserVO {
 
 const EXPIRE_TIME_SECS: usize = 24 * 60 * 60;
 
-async fn auth(State(pool): State<Pool>, req: Request, next: Next) -> Result<Response, StatusCode> {
+async fn auth(
+    State(pool): State<Pool>,
+    jar: CookieJar,
+    req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
     if req.uri() == "/login" && req.method() == Method::POST {
         return Ok(next.run(req).await);
     }
     if req.uri() == "/" && req.method() == Method::POST {
         return Ok(next.run(req).await);
     }
-    let headers = req.headers();
-    if let Some(token) = headers.get("token") {
+    if let Some(token) = jar.get("token") {
+        println!("{}", token.value());
         if let Ok(result) = decode::<JwtPayload>(
-            token.to_str().unwrap(),
+            token.value(),
             &DecodingKey::from_secret("secret".as_ref()),
             &Validation::default(),
         ) {
@@ -96,32 +104,69 @@ async fn auth(State(pool): State<Pool>, req: Request, next: Next) -> Result<Resp
                 params! {
                     "uuid" => uuid
                 },
-            ) {}
-            return Ok(next.run(req).await);
+            ) {
+                return Ok(next.run(req).await);
+            }
+            return Ok(Json(ResultVO {
+                code: "400",
+                data: MessageVO { msg: "未登录" },
+            })
+            .into_response());
         }
     }
-    Err(StatusCode::UNAUTHORIZED)
+    Ok(Json(ResultVO {
+        code: "400",
+        data: MessageVO { msg: "未登录" },
+    })
+    .into_response())
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(bound(deserialize = "'de: 'a"))]
+#[serde(untagged)] // Removes enum variant names from serialization
+enum GetUserDetailResponse<'a> {
+    Success(UserInfo),
+    Failure(MessageVO<'a>),
+}
+
+#[utoipa::path(
+    get, 
+    path = "/api/accounts/{username}", 
+    params(
+        ("username" = String, Path)
+    ), 
+    responses((status = 200)),
+    description = "get user details 获取用户详细信息"
+)]
 async fn get_user_detail<'a>(
     State(pool): State<Pool>,
     Path(username): Path<String>,
-) -> Json<ResultVO<'a, UserInfo>> {
+) -> Json<ResultVO<'a, GetUserDetailResponse<'a>>> {
     let mut conn = pool.get_conn().unwrap();
 
-    let result: UserInfo = conn.exec_first(
+    if let Ok(Some(result)) = conn.exec_first::<UserInfo,_,_>(
         "SELECT username, name, avatar, telephone, email, location FROM users WHERE username = (:username)",
         params! {
             "username" => username,
         },
-    ).unwrap().unwrap();
-
+    ) {
+        return Json(ResultVO {
+            code: "200",
+            data: GetUserDetailResponse::Success(result),
+        });
+    }
     Json(ResultVO {
         code: "400",
-        data: result,
+        data: GetUserDetailResponse::Failure(MessageVO { msg: "123" }),
     })
 }
 
+#[utoipa::path(
+    post, 
+    path = "/api/accounts", 
+    responses((status = 200)),
+    description = "register 注册"
+)]
 async fn create_user<'a>(
     State(pool): State<Pool>,
     Json(user): Json<User>,
@@ -153,17 +198,24 @@ async fn create_user<'a>(
     .unwrap();
 
     Json(ResultVO {
-        code: "000",
+        code: "200",
         data: MessageVO {
             msg: "用户创建成功",
         },
     })
 }
 
+#[utoipa::path(
+    post, 
+    path = "/api/accounts/login", 
+    responses((status = 200)),
+    description = "login 登录"
+)]
 async fn login<'a>(
     State(pool): State<Pool>,
+    jar: CookieJar,
     Json(login_vo): Json<LoginVO>,
-) -> Json<ResultVO<'a, LoginMessageVO<'a>>> {
+) -> (CookieJar, Json<ResultVO<'a, LoginMessageVO<'a>>>) {
     let mut conn = pool.get_conn().unwrap();
 
     if let Ok(Some((password, uuid))) = conn.exec_first::<(String, Vec<u8>), _, _>(
@@ -175,13 +227,16 @@ async fn login<'a>(
         let now = Utc::now();
 
         if !verify(login_vo.password, &password).unwrap() {
-            return Json(ResultVO {
-                code: "400",
-                data: LoginMessageVO {
-                    msg: "用户不存在/用户密码错误",
-                    token: "".to_string(),
-                },
-            });
+            return (
+                jar,
+                Json(ResultVO {
+                    code: "400",
+                    data: LoginMessageVO {
+                        msg: "用户不存在/用户密码错误",
+                        token: "".to_string(),
+                    },
+                }),
+            );
         }
 
         let token = encode(
@@ -194,24 +249,36 @@ async fn login<'a>(
         )
         .unwrap();
 
-        Json(ResultVO {
-            code: "000",
-            data: LoginMessageVO {
-                msg: "登录成功",
-                token,
-            },
-        })
+        (
+            jar.add(Cookie::new("token", token.clone())),
+            Json(ResultVO {
+                code: "200",
+                data: LoginMessageVO {
+                    msg: "登录成功",
+                    token,
+                },
+            }),
+        )
     } else {
-        Json(ResultVO {
-            code: "400",
-            data: LoginMessageVO {
-                msg: "用户不存在/用户密码错误",
-                token: "".to_string(),
-            },
-        })
+        (
+            jar,
+            Json(ResultVO {
+                code: "400",
+                data: LoginMessageVO {
+                    msg: "用户不存在/用户密码错误",
+                    token: "".to_string(),
+                },
+            }),
+        )
     }
 }
 
+#[utoipa::path(
+    put, 
+    path = "/api/accounts", 
+    responses((status = 200)), 
+    description = "Update User Info 更新用户信息"
+)]
 async fn update_user<'a>(
     State(pool): State<Pool>,
     Json(user): Json<UpdateUserVO>,
@@ -240,7 +307,7 @@ WHERE username = :username;",
     .unwrap();
 
     Json(ResultVO {
-        code: "400",
+        code: "200",
         data: MessageVO {
             msg: "用户信息更新成功",
         },
