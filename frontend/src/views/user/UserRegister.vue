@@ -84,7 +84,7 @@ function handleRegister() {
     email: email.value == "" ? null : email.value,
     location: location.value == "" ? null : location.value,
   }).then((res) => {
-    if (res.data.code == "000") {
+    if (res.data.code == "200") {
       ElMessage({
         message: "注册成功！",
         type: "success",

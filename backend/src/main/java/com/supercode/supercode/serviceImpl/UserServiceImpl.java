@@ -4,7 +4,6 @@ import cn.hutool.core.lang.Validator;
 import com.supercode.supercode.po.LoginResult;
 import com.supercode.supercode.vo.RetUserVO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.supercode.supercode.exception.SupercodeException;
@@ -14,6 +13,7 @@ import com.supercode.supercode.service.UserService;
 import com.supercode.supercode.util.TokenUtil;
 import com.supercode.supercode.vo.MessageVO;
 import com.supercode.supercode.vo.UserVO;
+import org.springframework.util.DigestUtils;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -50,9 +50,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public LoginResult login(String username, String password) {
-        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
         User user = userRepository.findByUsername(username);
-        if (user != null&&bCryptPasswordEncoder.matches(password,user.getPassword())) {
+        String tmp=password+"-=[]"+username;
+        if (user != null&&user.getPassword().equals(DigestUtils.md5DigestAsHex(tmp.getBytes()))) {
             return new LoginResult("登录成功", tokenUtil.getToken(user));
         }
         throw SupercodeException.loginFailure();

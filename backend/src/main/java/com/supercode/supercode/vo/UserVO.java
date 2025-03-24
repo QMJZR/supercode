@@ -6,7 +6,7 @@ import io.micrometer.common.lang.Nullable;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.util.DigestUtils;
 
 @Getter
 @Setter
@@ -32,7 +32,8 @@ public class UserVO {
             user.setUuid(uuid);
         }
         user.setUsername(username);
-        user.setPassword(new BCryptPasswordEncoder().encode(password));
+        String tmp=password+"-=[]"+username;
+        user.setPassword(DigestUtils.md5DigestAsHex(tmp.getBytes()));
         user.setName(name);
         if (avatar != null) {
             user.setAvatar(avatar);
