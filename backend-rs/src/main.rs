@@ -30,12 +30,12 @@ async fn main() {
         .nest("/worker", worker::stage())
         .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", ApiDoc::openapi()));
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8000")
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000")
         .await
         .unwrap();
 
-    println!("App running on http://localhost:8000");
-    println!("SwaggerUI running on http://localhost:8000/swagger");
+    println!("App running on http://127.0.0.1:8000");
+    println!("SwaggerUI running on http://127.0.0.1:8000/swagger");
 
     axum::serve(listener, app).await.unwrap();
 }
