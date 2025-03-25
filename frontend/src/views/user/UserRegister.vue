@@ -74,7 +74,6 @@ const registerDisabled = computed(() => {
   );
 });
 function handleRegister() {
-  console.log(username.value);
   userRegister({
     username: username.value,
     password: password.value,

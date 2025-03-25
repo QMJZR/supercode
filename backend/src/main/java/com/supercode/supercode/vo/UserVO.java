@@ -1,5 +1,6 @@
 package com.supercode.supercode.vo;
 
+import cn.hutool.crypto.digest.DigestUtil;
 import com.supercode.supercode.po.User;
 
 import io.micrometer.common.lang.Nullable;
@@ -33,7 +34,7 @@ public class UserVO {
         }
         user.setUsername(username);
         String tmp=password+"-=[]"+username;
-        user.setPassword(DigestUtils.md5DigestAsHex(tmp.getBytes()));
+        user.setPassword(DigestUtil.sha512Hex(tmp));
         user.setName(name);
         if (avatar != null) {
             user.setAvatar(avatar);

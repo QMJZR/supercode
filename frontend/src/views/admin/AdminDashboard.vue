@@ -3,6 +3,7 @@ import { userInfo, userInfoUpdate, type UpdateInfo } from "@/api/user";
 import AdminHeader from "@/components/AdminHeader.vue";
 import { router } from "@/route";
 import { computed, onMounted, ref } from "vue";
+import {ElMessage} from "element-plus";
 
 const username = ref<string>("");
 const name = ref<string>("");
@@ -32,19 +33,42 @@ const handleUpdate = () => {
   const userInfo: UpdateInfo = {
     username: username.value,
     name: name.value,
-    avatar: avatar.value,
-    telephone: telephone.value,
-    email: email.value,
-    location: location.value,
+    avatar: avatar.value===""?null:avatar.value,
+    telephone: telephone.value===""?null:telephone.value,
+    email: email.value===""?null:email.value,
+    location: location.value===""?null:location.value,
   };
-  console.log(userInfo);
   userInfoUpdate(userInfo).then((res) => {
-    console.log(res);
+    if (res.code == "200") {
+      ElMessage({
+        message: "修改成功！",
+        type: "success",
+        center: true,
+      });
+      router.push("/app");
+    } else {
+      ElMessage({
+        message: "修改失败！",
+        type: "error",
+        center: true,
+      });
+    }
   });
 };
 
-const nameEmpty = computed(() => {
-  return name.value === "";
+const hasUsernameInput = computed(() => username.value != "");
+const hasNameInput = computed(() => name.value != "");
+const chinaMobileRegex = /^1(3[0-9]|4[579]|5[0-35-9]|6[2567]|7[0-8]|8[0-9]|9[189])\d{8}$/;
+const telLegal = computed(() => telephone.value==null||telephone.value == "" || telephone.value!=null&&chinaMobileRegex.test(telephone.value));
+const emailRegex = /\w+@[A-Za-z]+(\.[A-Za-z0-9]+){1,2}/;
+const emailLegal = computed(() => email.value==null||email.value == "" || email.value!=null&&emailRegex.test(email.value));
+const updateDisabled = computed(() => {
+  return !(
+    hasUsernameInput.value &&
+    hasNameInput.value &&
+    telLegal.value &&
+    emailLegal.value
+  );
 });
 </script>
 
@@ -76,7 +100,7 @@ const nameEmpty = computed(() => {
         <label>地址</label>
         <el-input v-model="location"></el-input>
       </div>
-      <el-button @click="handleUpdate" :disabled="nameEmpty">修改</el-button>
+      <el-button @click="handleUpdate" :disabled="updateDisabled">修改</el-button>
     </div>
   </div>
 </template>

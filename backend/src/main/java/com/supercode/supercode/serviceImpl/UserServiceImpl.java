@@ -1,6 +1,7 @@
 package com.supercode.supercode.serviceImpl;
 
 import cn.hutool.core.lang.Validator;
+import cn.hutool.crypto.digest.DigestUtil;
 import com.supercode.supercode.po.LoginResult;
 import com.supercode.supercode.vo.RetUserVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +53,7 @@ public class UserServiceImpl implements UserService {
     public LoginResult login(String username, String password) {
         User user = userRepository.findByUsername(username);
         String tmp=password+"-=[]"+username;
-        if (user != null&&user.getPassword().equals(DigestUtils.md5DigestAsHex(tmp.getBytes()))) {
+        if (user != null&&user.getPassword().equals(DigestUtil.sha512Hex(tmp))) {
             return new LoginResult("登录成功", tokenUtil.getToken(user));
         }
         throw SupercodeException.loginFailure();
