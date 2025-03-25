@@ -1,4 +1,6 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import UserHeader from "@/components/UserHeader.vue";
+</script>
 
 <template>
   <UserHeader />

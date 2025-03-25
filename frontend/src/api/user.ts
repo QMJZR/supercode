@@ -15,13 +15,13 @@ type RegisterInfo = {
   location: string | null;
 };
 
-type UpdateInfo = {
+export type UpdateInfo = {
   username: string;
-  name?: string;
-  avatar?: string;
-  telephone?: string;
-  email?: string;
-  location?: string;
+  name: string;
+  avatar: string | null;
+  telephone: string | null;
+  email: string | null;
+  location: string | null;
 };
 
 // 如果有“Vue: This may be converted to an async function”警告，可以不管
@@ -50,7 +50,7 @@ export const userRegister = (registerInfo: RegisterInfo) => {
 // 获取用户信息
 export const userInfo = (username: string) => {
   return axios.get(`/api/accounts/${username}`).then((res) => {
-    return res;
+    return res.data;
   });
 };
 
@@ -59,6 +59,6 @@ export const userInfoUpdate = (updateInfo: UpdateInfo) => {
   return axios
     .put(`/api/accounts`, updateInfo, { headers: { "Content-Type": "application/json" } })
     .then((res) => {
-      return res;
+      return res.data;
     });
 };
