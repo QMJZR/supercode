@@ -2,7 +2,7 @@ package com.supercode.supercode.serviceImpl;
 
 import cn.hutool.core.lang.Validator;
 import cn.hutool.crypto.digest.DigestUtil;
-import com.supercode.supercode.po.LoginResult;
+import com.supercode.supercode.vo.LoginResultVO;
 import com.supercode.supercode.vo.RetUserVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,7 +14,8 @@ import com.supercode.supercode.service.UserService;
 import com.supercode.supercode.util.TokenUtil;
 import com.supercode.supercode.vo.MessageVO;
 import com.supercode.supercode.vo.UserVO;
-import org.springframework.util.DigestUtils;
+
+import java.util.Objects;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -36,7 +37,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public MessageVO createUser(UserVO user) {
-        if(user.getName()==null)
+        if(!Objects.equals(user.getRole(), "admin") && !Objects.equals(user.getRole(), "user") && !Objects.equals(user.getRole(), "staff"))
             throw SupercodeException.createFail();
         if (userRepository.findByUsername(user.getUsername()) != null) {
             throw SupercodeException.userExisted();
@@ -50,11 +51,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public LoginResult login(String username, String password) {
+    public LoginResultVO login(String username, String password) {
         User user = userRepository.findByUsername(username);
         String tmp=password+"-=[]"+username;
         if (user != null&&user.getPassword().equals(DigestUtil.sha512Hex(tmp))) {
-            return new LoginResult("登录成功", tokenUtil.getToken(user));
+            return new LoginResultVO("登录成功", tokenUtil.getToken(user));
         }
         throw SupercodeException.loginFailure();
     }
