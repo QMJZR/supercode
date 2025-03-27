@@ -63,6 +63,7 @@ public class User {
         userVO.setPassword(password);
         userVO.setName(name);
         userVO.setAvatar(avatar);
+        userVO.setRole(role);
         userVO.setTelephone(telephone);
         userVO.setEmail(email);
         userVO.setLocation(location);
@@ -73,6 +74,7 @@ public class User {
         retUserVO.setUsername(username);
         retUserVO.setName(name);
         retUserVO.setAvatar(avatar);
+        retUserVO.setRole(role);
         retUserVO.setTelephone(telephone);
         retUserVO.setEmail(email);
         retUserVO.setLocation(location);

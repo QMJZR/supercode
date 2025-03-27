@@ -13,6 +13,7 @@ public class RetUserVO {
     private String name;
     @Nullable
     private String avatar;
+    private String role;
     @Nullable
     private String telephone;
     @Nullable
