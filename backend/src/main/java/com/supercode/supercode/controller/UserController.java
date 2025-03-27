@@ -1,6 +1,5 @@
 package com.supercode.supercode.controller;
 
-import com.supercode.supercode.po.LoginResult;
 import com.supercode.supercode.vo.*;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,17 +27,16 @@ public class UserController {
 
     @PostMapping("/login")
     public ResultVO<LoginResultVO> login(HttpServletResponse request,@RequestBody LoginVO loginVO) {
-        LoginResult result=userService.login(loginVO.getUsername(), loginVO.getPassword());
-        LoginResultVO resultVO=result.toVO();
+        LoginResultVO result=userService.login(loginVO.getUsername(), loginVO.getPassword());
         Cookie cookie=new Cookie("token",result.getToken());
         cookie.setPath("/");
         cookie.setMaxAge(24*60*60);
         request.addCookie(cookie);
-        return ResultVO.buildSuccess(resultVO);
+        return ResultVO.buildSuccess(result);
     }
 
     @PutMapping("")
-    public ResultVO<MessageVO> putMethodName(@RequestBody UserVO userVO) {
+    public ResultVO<MessageVO> update(@RequestBody UserVO userVO) {
         return ResultVO.buildSuccess(userService.update(userVO));
     }
 }

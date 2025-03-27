@@ -20,6 +20,7 @@ public class UserVO {
     private String name;
     @Nullable
     private String avatar;
+    private String role;
     @Nullable
     private String telephone;
     @Nullable
@@ -39,6 +40,7 @@ public class UserVO {
         if (avatar != null) {
             user.setAvatar(avatar);
         }
+        user.setRole(role);
         if (telephone != null) {
             user.setTelephone(telephone);
         }

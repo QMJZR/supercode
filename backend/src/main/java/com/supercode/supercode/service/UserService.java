@@ -1,6 +1,6 @@
 package com.supercode.supercode.service;
 
-import com.supercode.supercode.po.LoginResult;
+import com.supercode.supercode.vo.LoginResultVO;
 import com.supercode.supercode.vo.RetUserVO;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +14,7 @@ public interface UserService {
 
     MessageVO createUser(UserVO user);
 
-    LoginResult login(String username, String password);
+    LoginResultVO login(String username, String password);
 
     MessageVO update(UserVO user);
 }

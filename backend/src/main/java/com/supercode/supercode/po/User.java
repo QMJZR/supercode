@@ -41,6 +41,10 @@ public class User {
     private String avatar;
 
     @Basic
+    @Column(name = "role", nullable = false)
+    private String role;
+
+    @Basic
     @Column(name = "telephone")
     private String telephone;
 
