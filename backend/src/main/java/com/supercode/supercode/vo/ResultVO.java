@@ -12,14 +12,14 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ResultVO<T> implements Serializable {
-    private String code;
+    private Integer code;
     private T data;
 
     public static <T> ResultVO<T> buildSuccess(T data) {
-        return new ResultVO<T>("200", data);
+        return new ResultVO<T>(200, data);
     }
 
     public static <T> ResultVO<MessageVO> buildFailure(String message) {
-        return new ResultVO<MessageVO>("400", new MessageVO(message));
+        return new ResultVO<MessageVO>(400, new MessageVO(message));
     }
 }

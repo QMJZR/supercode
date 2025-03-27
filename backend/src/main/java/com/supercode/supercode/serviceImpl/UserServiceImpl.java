@@ -66,6 +66,7 @@ public class UserServiceImpl implements UserService {
             User user=userRepository.findByUsername(userVO.getUsername());
             if(userVO.getName()!=null)
                 user.setName(userVO.getName());
+            userVO.setPassword(DigestUtil.sha512Hex(userVO.getUsername()+"-=[]"+userVO.getPassword()));
             user.setAvatar(userVO.getAvatar());
             if(userVO.getTelephone() != null && (userVO.getTelephone().charAt(0) != '1' || userVO.getTelephone().length() != 11))
                 throw SupercodeException.updateFailed();

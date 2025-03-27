@@ -28,4 +28,13 @@ public class SupercodeException extends RuntimeException {
     public static Exception userNotExisted() {
         throw new SupercodeException("用户不存在");
     }
+
+    public static Exception productNotExisted() {
+        throw new SupercodeException("商品不存在");
+    }
+
+    public static Exception noIdAllowed() {
+        throw new SupercodeException("创建商品禁止携带id！");
+    }
+
 }
